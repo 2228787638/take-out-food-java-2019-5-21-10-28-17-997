@@ -1,3 +1,5 @@
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.List;
 
 /*
@@ -14,7 +16,76 @@ public class App {
 
     public String bestCharge(List<String> inputs) {
         //TODO: write code here
+        //菜的最优总价
+        double allMoney=0;
+        //记录使用的优惠
+        String promotion="";
+        //半价菜品总价
+        double firstMoney=0;
+        //半价购买省得钱数
+        double firstMoneyDeli=0;
+        //满30元减6元总价
+        double secondMoney=0;
+        //存储用户购买的菜中的半价菜
+        List<String> itemslist=new ArrayList<>();
+        //优惠菜品
+        List<String> salesPromotionItems=new ArrayList<String>();
+        //所有优惠
+        List<SalesPromotion> salesPromotionList=salesPromotionRepository.findAll();
+        //所有的菜
+        List<Item> itemList=itemRepository.findAll();
+        //用户所选的菜
+        String userItem=new String();
+        //判断是否满30
+        boolean flag = false;
+        //把优惠的情况列举
+        for(SalesPromotion salesPromotion:salesPromotionList){
+            //把半价的菜品找出来
+            if(salesPromotion.getType()=="50%_DISCOUNT_ON_SPECIFIED_ITEMS"){
+                salesPromotionItems=salesPromotion.getRelatedItems();
+            }
+        }
+        //遍历用户输入的菜
+        for(int i=0;i<inputs.size();i++){
+            String [] input=inputs.get(i).split("x");
+            //根据Id查找菜
+            Item item=itemRepository.findOne(input[0].trim());
+            userItem=userItem+item.getName()+" x"+input[1]+" = "+(int)(item.getPrice()*Double.parseDouble(input[1]))+"元\n";
+            if(salesPromotionItems.contains(item.getId())){
+                itemslist.add(item.getName());
+                firstMoney=firstMoney+item.getPrice()/2*Double.parseDouble(input[1]);
+                firstMoneyDeli=firstMoneyDeli+item.getPrice()/2*Double.parseDouble(input[1]);
+            }else{
+                firstMoney=firstMoney+item.getPrice()*Double.parseDouble(input[1]);
+            }
 
-        return null;
+            secondMoney=secondMoney+item.getPrice()*Double.parseDouble(input[1]);
+            if(secondMoney>=30){
+                flag=false;
+                secondMoney=secondMoney-6;
+            }else{
+                flag=true;
+            }
+        }
+        if(itemslist.size()==0||flag==true){
+            allMoney=secondMoney;
+            promotion="";
+        }else if(firstMoney>=secondMoney){
+            allMoney=secondMoney;
+            promotion="使用优惠:\n"+"满30减6元，省6元\n"+"-----------------------------------\n";
+        }else if(firstMoney<secondMoney){
+            allMoney=firstMoney;
+            promotion="使用优惠:\n"+"指定菜品半价("+itemslist.toString().substring(1,itemslist.toString().length()-1).replace(", ","，")+")，省"+(int)firstMoneyDeli+"元\n"+
+                    "-----------------------------------\n";
+
+        }
+
+        return "============= 订餐明细 =============\n" +
+                userItem+
+                "-----------------------------------\n" +
+                promotion+
+                "总计："+(int)allMoney+"元\n" +
+                "===================================";
+
     }
 }
